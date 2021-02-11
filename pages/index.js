@@ -1,11 +1,14 @@
 import Head from 'next/head'
 import styles from '../styles/Home.module.css'
+import Image from 'next/image'
+import { ApolloClient, InMemoryCache, gql } from '@apollo/client'
 
-export default function Home() {
+export default function Home({ launches }) {
+  console.log('launches', launches);
   return (
     <div className={styles.container}>
       <Head>
-        <title>Create Next App</title>
+        <title>Space-X Launches</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -20,33 +23,24 @@ export default function Home() {
         </p>
 
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          {launches.map(launch => {
+            return (
+              <a key={launch.id} href={launch.links.video_link} className={styles.card}>
+                <h3>{launch.mission_name}</h3>
+                {/* {console.log(launch.links.mission_patch)} */}
+                {/* <Image
+                  // src="/me.png"
+                  src={`${launch.links.mission_patch}`}
+                  alt="Mission Patch"
+                  width={500}
+                  height={500}
+                /> */}
+                <img src={`${launch.links.mission_patch}`} alt="" width={100} />
+                <p><strong>Launch Date:</strong> {new Date(launch.launch_date_local).toLocaleDateString("en-US")}
+                </p>
+              </a>
+            );
+          })}
         </div>
       </main>
 
@@ -62,4 +56,38 @@ export default function Home() {
       </footer>
     </div>
   )
+}
+
+export async function getStaticProps() {
+  const client = new ApolloClient({
+    uri: 'https://api.spacex.land/graphql/',
+    cache: new InMemoryCache()
+  })
+  const { data } = await client.query({
+    query: gql`
+      query GetLaunches {
+        launchesPast(limit: 10) {
+          id
+          mission_name
+          launch_date_local
+          launch_site {
+            site_name_long
+          }
+          links {
+            article_link
+            video_link
+            mission_patch
+          }
+          rocket {
+            rocket_name
+          }
+        }
+      }
+    `
+  });
+  return {
+    props: {
+      launches: data.launchesPast
+    }
+  }
 }
